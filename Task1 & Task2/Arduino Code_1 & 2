@@ -1,0 +1,75 @@
+const int greenLight = 2;
+const int yellowLight = 3;
+const int redLight = 4;
+const int pedRed = 5;
+const int pedGreen = 6;
+const int button = 7;
+
+enum TrafficState { GREEN, WAIT, YELLOW, RED };
+TrafficState currentState = GREEN;
+
+unsigned long stateTimer = 0;
+bool buttonPressed = false;
+
+void setup() {
+  pinMode(greenLight, OUTPUT);
+  pinMode(yellowLight, OUTPUT);
+  pinMode(redLight, OUTPUT);
+  pinMode(pedRed, OUTPUT);
+  pinMode(pedGreen, OUTPUT);
+  pinMode(button, INPUT_PULLUP);
+
+  digitalWrite(greenLight, HIGH);
+  digitalWrite(pedRed, HIGH);
+  stateTimer = millis();
+}
+
+void loop() {
+  if (digitalRead(button) == LOW) {
+    buttonPressed = true;
+  }
+
+  switch (currentState) {
+    case GREEN:
+      if (buttonPressed || millis() - stateTimer >= 10000) {
+        buttonPressed = false;
+        stateTimer = millis();
+        currentState = WAIT;
+      }
+      break;
+
+    case WAIT:
+      if (millis() - stateTimer >= 3000) {
+        stateTimer = millis();
+        currentState = YELLOW;
+      }
+      break;
+
+    case YELLOW:
+      if (millis() - stateTimer >= 2000) {
+        stateTimer = millis();
+        currentState = RED;
+      }
+      digitalWrite(greenLight, LOW);
+      digitalWrite(yellowLight, HIGH);
+      break;
+
+    case RED:
+      if (millis() - stateTimer >= 10000) {
+        stateTimer = millis();
+        currentState = GREEN;
+      }
+      digitalWrite(yellowLight, LOW);
+      digitalWrite(redLight, HIGH);
+      digitalWrite(pedRed, LOW);
+      digitalWrite(pedGreen, HIGH);
+
+      if (currentState == GREEN) {
+        digitalWrite(pedGreen, LOW);
+        digitalWrite(pedRed, HIGH);
+        digitalWrite(redLight, LOW);
+        digitalWrite(greenLight, HIGH);
+      }
+      break;
+  }
+}
