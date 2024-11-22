@@ -1,0 +1,88 @@
+const int g_light = 2;
+const int y_light = 3;
+const int r_light = 4;
+const int p_red = 5;
+const int p_green = 6;
+
+// Variables
+const unsigned long y_duration = 2000;
+const unsigned long g_delay = 3000;
+bool button_pressed = false;
+enum TrafficState { GREEN, YELLOW, RED };
+TrafficState current_state = GREEN;
+unsigned long last_state_change = 0;
+
+void setup() {
+  pinMode(g_light, OUTPUT);
+  pinMode(y_light, OUTPUT);
+  pinMode(r_light, OUTPUT);
+  pinMode(p_red, OUTPUT);
+  pinMode(p_green, OUTPUT);
+
+  digitalWrite(g_light, HIGH);
+  digitalWrite(p_red, HIGH);
+
+  Serial.begin(9600); 
+}
+
+void loop() {
+  if (Serial.available() > 0) {
+    char receivedChar = Serial.read();
+    if (receivedChar == '1') {
+      button_pressed = true;
+    }
+  }
+
+  unsigned long currentMillis = millis();
+
+  switch (current_state) {
+    case GREEN:
+      if (button_pressed) {
+        if (currentMillis - last_state_change >= g_delay) {
+          button_pressed = false;
+          current_state = YELLOW;
+          last_state_change = currentMillis;
+        }
+      } else if (currentMillis - last_state_change >= 10000) {
+        current_state = YELLOW;
+        last_state_change = currentMillis;
+      }
+      break;
+
+    case YELLOW:
+      if (currentMillis - last_state_change >= y_duration) {
+        current_state = RED;
+        last_state_change = currentMillis;
+
+        digitalWrite(g_light, LOW);
+        digitalWrite(y_light, LOW);
+        digitalWrite(r_light, HIGH);
+        digitalWrite(p_red, LOW);
+        digitalWrite(p_green, HIGH);
+      }
+      break;
+
+    case RED:
+      if (currentMillis - last_state_change >= 10000) {
+        current_state = GREEN;
+        last_state_change = currentMillis;
+
+        digitalWrite(p_green, LOW);
+        digitalWrite(p_red, HIGH);
+
+        digitalWrite(r_light, LOW);
+        digitalWrite(g_light, HIGH);
+      }
+      break;
+  }
+
+  if (current_state == GREEN) {
+    digitalWrite(g_light, HIGH);
+    digitalWrite(y_light, LOW);
+    digitalWrite(r_light, LOW);
+  } else if (current_state == YELLOW) {
+    digitalWrite(g_light, LOW);
+    digitalWrite(y_light, HIGH);
+    digitalWrite(r_light, LOW);
+  }
+}
