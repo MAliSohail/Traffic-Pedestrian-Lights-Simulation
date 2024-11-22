@@ -1,0 +1,28 @@
+const int button_pin = 2;
+enum button_state { IDLE, PRESSED };
+button_state currentState = IDLE;
+
+void setup() {
+  pinMode(button_pin, INPUT_PULLUP);
+  Serial.begin(9600);          
+}
+
+void loop() {
+  switch (currentState) {
+    case IDLE:
+      if (digitalRead(button_pin) == LOW) {
+        delay(50);  // Debounce delay
+        if (digitalRead(button_pin) == LOW) {
+          Serial.println('1');
+          currentState = PRESSED; 
+        }
+      }
+      break;
+
+    case PRESSED:
+      if (digitalRead(button_pin) == HIGH) {
+        currentState = IDLE;
+      }
+      break;
+  }
+}
