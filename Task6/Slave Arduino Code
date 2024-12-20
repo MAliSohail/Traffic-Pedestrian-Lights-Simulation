@@ -1,0 +1,60 @@
+#include <Wire.h>
+
+// Pin definitions
+const int D3_RED = 5;
+const int D3_YELLOW = 4;
+const int D3_GREEN = 3;
+
+void setup() {
+  // Initialize I2C communication as slave with address 8
+  Wire.begin(8);
+  Wire.onReceive(receiveEvent);
+  
+  // Set pin modes
+  pinMode(D3_RED, OUTPUT);
+  pinMode(D3_YELLOW, OUTPUT);
+  pinMode(D3_GREEN, OUTPUT);
+  
+  // Initial state (red)
+  setD3Red();
+}
+
+void loop() {
+  // Slave Arduino just waits for I2C commands
+  delay(100);
+}
+
+void receiveEvent(int bytes) {
+  if (Wire.available()) {
+    int state = Wire.read();
+    switch (state) {
+      case 0:
+        setD3Red();
+        break;
+      case 1:
+        setD3Green();
+        break;
+      case 2:
+        setD3Yellow();
+        break;
+    }
+  }
+}
+
+void setD3Red() {
+  digitalWrite(D3_RED, HIGH);
+  digitalWrite(D3_YELLOW, LOW);
+  digitalWrite(D3_GREEN, LOW);
+}
+
+void setD3Green() {
+  digitalWrite(D3_RED, LOW);
+  digitalWrite(D3_YELLOW, LOW);
+  digitalWrite(D3_GREEN, HIGH);
+}
+
+void setD3Yellow() {
+  digitalWrite(D3_RED, LOW);
+  digitalWrite(D3_YELLOW, HIGH);
+  digitalWrite(D3_GREEN, LOW);
+}
