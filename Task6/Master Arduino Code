@@ -1,0 +1,136 @@
+#include <Wire.h>
+
+// Pin definitions
+const int D1_RED = 8;
+const int D1_YELLOW = 7;
+const int D1_GREEN = 6;
+const int D2_RED = 5;
+const int D2_YELLOW = 4;
+const int D2_GREEN = 3;
+const int PED_RED = 2;
+const int PED_GREEN = 9;
+const int PED_BUTTON = 10;
+
+// Timing constants (in milliseconds)
+const unsigned long MIN_STATE_TIME = 3000;  // 3 seconds
+const unsigned long NORMAL_STATE_TIME = 10000;  // 10 seconds
+const unsigned long YELLOW_TIME = 2000;  // 2 seconds
+
+// State variables
+bool isPedestrianActive = false;
+unsigned long lastStateChange = 0;
+bool currentState = false;  // false = D1&D2 green, D3 red; true = D1&D2 red, D3 green
+
+void setup() {
+  // Initialize I2C communication as master
+  Wire.begin();
+  
+  // Set pin modes
+  pinMode(D1_RED, OUTPUT);
+  pinMode(D1_YELLOW, OUTPUT);
+  pinMode(D1_GREEN, OUTPUT);
+  pinMode(D2_RED, OUTPUT);
+  pinMode(D2_YELLOW, OUTPUT);
+  pinMode(D2_GREEN, OUTPUT);
+  pinMode(PED_RED, OUTPUT);
+  pinMode(PED_GREEN, OUTPUT);
+  pinMode(PED_BUTTON, INPUT_PULLUP);
+  
+  // Initial state
+  setInitialState();
+}
+
+void loop() {
+  // Check pedestrian button
+  if (digitalRead(PED_BUTTON) == LOW && !isPedestrianActive) {
+    isPedestrianActive = true;
+  }
+  
+  // Check if state change is needed and minimum time has passed
+  unsigned long currentTime = millis();
+  if (isPedestrianActive && (currentTime - lastStateChange >= MIN_STATE_TIME)) {
+    changeState();
+    isPedestrianActive = false;
+  }
+  // Check if normal state time has elapsed
+  else if (currentTime - lastStateChange >= NORMAL_STATE_TIME) {
+    changeState();
+  }
+}
+
+void setInitialState() {
+  // Start with D1 & D2 green, D3 red, Pedestrian red
+  digitalWrite(D1_RED, LOW);
+  digitalWrite(D1_YELLOW, LOW);
+  digitalWrite(D1_GREEN, HIGH);
+  digitalWrite(D2_RED, LOW);
+  digitalWrite(D2_YELLOW, LOW);
+  digitalWrite(D2_GREEN, HIGH);
+  digitalWrite(PED_RED, HIGH);
+  digitalWrite(PED_GREEN, LOW);
+  
+  // Tell slave Arduino to set D3 to red
+  Wire.beginTransmission(8);
+  Wire.write(0);  // 0 = red
+  Wire.endTransmission();
+  
+  lastStateChange = millis();
+  currentState = false;
+}
+
+void changeState() {
+  // First, set all lights to yellow
+  setYellowState();
+  delay(YELLOW_TIME);
+  
+  // Toggle current state
+  currentState = !currentState;
+  
+  if (currentState) {
+    // Set D1 & D2 to red, D3 to green, Pedestrian to green
+    digitalWrite(D1_RED, HIGH);
+    digitalWrite(D1_YELLOW, LOW);
+    digitalWrite(D1_GREEN, LOW);
+    digitalWrite(D2_RED, HIGH);
+    digitalWrite(D2_YELLOW, LOW);
+    digitalWrite(D2_GREEN, LOW);
+    digitalWrite(PED_RED, LOW);
+    digitalWrite(PED_GREEN, HIGH);
+    
+    // Tell slave Arduino to set D3 to green
+    Wire.beginTransmission(8);
+    Wire.write(1);  // 1 = green
+    Wire.endTransmission();
+  } else {
+    // Set D1 & D2 to green, D3 to red, Pedestrian to red
+    digitalWrite(D1_RED, LOW);
+    digitalWrite(D1_YELLOW, LOW);
+    digitalWrite(D1_GREEN, HIGH);
+    digitalWrite(D2_RED, LOW);
+    digitalWrite(D2_YELLOW, LOW);
+    digitalWrite(D2_GREEN, HIGH);
+    digitalWrite(PED_RED, HIGH);
+    digitalWrite(PED_GREEN, LOW);
+    
+    // Tell slave Arduino to set D3 to red
+    Wire.beginTransmission(8);
+    Wire.write(0);  // 0 = red
+    Wire.endTransmission();
+  }
+  
+  lastStateChange = millis();
+}
+
+void setYellowState() {
+  digitalWrite(D1_RED, LOW);
+  digitalWrite(D1_YELLOW, HIGH);
+  digitalWrite(D1_GREEN, LOW);
+  digitalWrite(D2_RED, LOW);
+  digitalWrite(D2_YELLOW, HIGH);
+  digitalWrite(D2_GREEN, LOW);
+  
+  // Tell slave Arduino to set D3 to yellow
+  Wire.beginTransmission(8);
+  Wire.write(2);  // 2 = yellow
+  Wire.endTransmission();
+}
